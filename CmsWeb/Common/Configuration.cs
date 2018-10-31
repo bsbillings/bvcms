@@ -5,9 +5,9 @@ namespace CmsWeb.Common
     /// <summary>
     ///     Abstraction of our configuration class
     /// </summary>
-    public class Configuration
+    public class Configuration : IConfigurationManager
     {
-        public static Configuration Current
+        public Configuration Current
         {
             get { return new Configuration(); }
         }
@@ -62,6 +62,7 @@ namespace CmsWeb.Common
             get { return GetString("PushpayScope"); }
         }
 
+        
         /// <summary>
         ///     Returns a string representation of this application setting
         /// </summary>
@@ -106,5 +107,6 @@ namespace CmsWeb.Common
             if (!int.TryParse(val, out result)) return defaultValue;
             return result;
         }
+
     }
 }

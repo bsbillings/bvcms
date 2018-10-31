@@ -11,13 +11,26 @@ using CmsWeb.Pushpay.Entities;
 using Newtonsoft.Json.Linq;
 using System.Text.RegularExpressions;
 using UtilityExtensions;
+using UtilityExtensions.Interfaces;
+using CmsData.Interfaces;
 
 namespace CmsWeb.Areas.Setup.Controllers
 {
     [RouteArea("Setup", AreaPrefix = "Pushpay")]
     public class PushpayController : Controller
-    {        
+    {
+        IConfigurationManager _configurationManager;
+        IDbUtilManager _dbUtil;
+        IUtilManager _Util;
+        CMSDataContext _dbContext;
         
+        public PushpayController(IConfigurationManager configurationManager, IDbUtilManager dbUtil, IUtilManager Util)
+        {
+            _configurationManager = configurationManager ?? throw new ArgumentNullException("configurationManager");
+            _dbUtil = dbUtil ?? throw new ArgumentNullException("dbUtil");
+            _Util = Util ?? throw new ArgumentNullException("Util");
+            _dbContext = _dbUtil.Create(_Util.Host);
+        }
         /// <summary>
         ///     Opens the developer console in a separate VIEW
         /// </summary>
@@ -34,36 +47,34 @@ namespace CmsWeb.Areas.Setup.Controllers
         [Route("~/Pushpay")]
         public ActionResult Index()
         {            
-            string redirectUrl = Configuration.Current.OAuth2AuthorizeEndpoint
-                + "?client_id=" + Configuration.Current.PushpayClientID
+            string redirectUrl = _configurationManager.OAuth2AuthorizeEndpoint
+                + "?client_id=" + _configurationManager.PushpayClientID
                 + "&response_type=code"
-                + "&redirect_uri=" + Configuration.Current.TouchpointAuthServer
-                + "&scope=" + Configuration.Current.PushpayScope
-                + "&state=" + DbUtil.Db.Host; //Get  xsrf_token:tenantID
+                + "&redirect_uri=" + _configurationManager.TouchpointAuthServer
+                + "&scope=" + _configurationManager.PushpayScope
+                + "&state=" + _dbContext.Host; //Get  xsrf_token:tenantID
 
             return Redirect(redirectUrl);
         }
 
         [AllowAnonymous, Route("~/Pushpay/Complete")]
-        public async Task<ActionResult> Complete()
+        public async Task<ActionResult> Complete(string code, string state)
         {
             string redirectUrl;
-            var tenantHost = Request["state"];
-            if (!Configuration.Current.IsDeveloperMode)
-            {
-                redirectUrl = "https://" + tenantHost + "." + Configuration.Current.OrgBaseDomain + "/Pushpay/Save";
-            }
-            else {
-                redirectUrl = "http://" + Configuration.Current.TenantHostDev + "/Pushpay/Save";
-            }
-
+            var tenantHost = state;
+#if DEBUG
+            redirectUrl = "http://" + _configurationManager.Current.TenantHostDev + "/Pushpay/Save";
+#else
+            redirectUrl = "https://" + tenantHost + "." + _configurationManager.Current.OrgBaseDomain + "/Pushpay/Save";
+#endif
             //Received authorization code from authorization server
-            var authorizationCode = Request["code"];
+            var authorizationCode = code;
             if (authorizationCode != null && authorizationCode != "")
             {
                 //Get code returned from Pushpay
                 var at = await AuthorizationCodeCallback(authorizationCode);
-                return Redirect(redirectUrl + "?_at=" + at.access_token + "&_rt=" + at.refresh_token);
+                redirectUrl = redirectUrl + "?_at=" + at.access_token + "&_rt=" + at.refresh_token;
+                return Redirect(redirectUrl);
             }
             return Redirect("~/Home/Index");
         }
@@ -72,39 +83,44 @@ namespace CmsWeb.Areas.Setup.Controllers
         public ActionResult Save(string _at, string _rt)
         {
             string idAccessToken = "PushpayAccessToken", idRefreshToken= "PushpayRefreshToken";
-            var dbContext = DbUtil.Db;
-            var m = dbContext.Settings.AsQueryable();
+            
+            var m = _dbContext.Settings.AsQueryable();
             if (!Regex.IsMatch(idAccessToken, @"\A[A-z0-9-]*\z"))
                 return View("Invalid characters in setting id");
 
-            if (!dbContext.Settings.Any(s => s.Id == idAccessToken))
+            if (!_dbContext.Settings.Any(s => s.Id == idAccessToken))
             {
                 //Create access token
                 var s = new Setting { Id = idAccessToken, SettingX = _at };
-                dbContext.Settings.InsertOnSubmit(s);
-                dbContext.SubmitChanges();
-                dbContext.SetSetting(idAccessToken, _at);
+                _dbContext.Settings.InsertOnSubmit(s);
+                _dbContext.SubmitChanges();
+                _dbContext.SetSetting(idAccessToken, _at);
             }
             else { // Update access token
-                DbUtil.Db.SetSetting(idAccessToken, _at);
-                DbUtil.Db.SubmitChanges();
-                DbUtil.LogActivity($"Edit Setting {idAccessToken} to {_at}", userId: Util.UserId);
+                _dbContext.SetSetting(idAccessToken, _at);
+                _dbContext.SubmitChanges();
+                DbLogUserActivity($"Edit Setting {idAccessToken} to {_at}", Util.UserId);
             }
-            if (!dbContext.Settings.Any(s => s.Id == idRefreshToken))
+            if (!_dbContext.Settings.Any(s => s.Id == idRefreshToken))
             { //Create refresh token
                 var s = new Setting { Id = idRefreshToken, SettingX = _rt };
-                dbContext.Settings.InsertOnSubmit(s);
-                dbContext.SubmitChanges();
-                dbContext.SetSetting(idRefreshToken, _rt);
+                _dbContext.Settings.InsertOnSubmit(s);
+                _dbContext.SubmitChanges();
+                _dbContext.SetSetting(idRefreshToken, _rt);
             }
             else
             { // Update refresh token
-                DbUtil.Db.SetSetting(idRefreshToken, _rt);
-                DbUtil.Db.SubmitChanges();
-                DbUtil.LogActivity($"Edit Setting {idRefreshToken} to {_rt}", userId: Util.UserId);
+                _dbContext.SetSetting(idRefreshToken, _rt);
+                _dbContext.SubmitChanges();
+                DbLogUserActivity($"Edit Setting {idRefreshToken} to {_rt}", Util.UserId);                
             }
 
             return RedirectToAction("Finish");
+        }
+
+        protected virtual void DbLogUserActivity(string _activity, int _userId)
+        {
+            DbUtil.LogActivity(_activity, userId: _userId);
         }
 
         [Route("~/Pushpay/Finish")]
@@ -119,11 +135,11 @@ namespace CmsWeb.Areas.Setup.Controllers
             Dictionary<string, string> post = null;
             post = new Dictionary<string, string>
             {
-                { "client_id", Configuration.Current.PushpayClientID}
-                ,{"client_secret", Configuration.Current.PushpayClientSecret}
+                { "client_id", _configurationManager.Current.PushpayClientID}
+                ,{"client_secret", _configurationManager.Current.PushpayClientSecret}
                 ,{"grant_type", "authorization_code"}
                 ,{"code", _authCode}
-                ,{"redirect_uri", Configuration.Current.TouchpointAuthServer}
+                ,{"redirect_uri", _configurationManager.Current.TouchpointAuthServer}
             };
 
             var client = new HttpClient();
@@ -133,18 +149,20 @@ namespace CmsWeb.Areas.Setup.Controllers
                     "Basic",
                     Convert.ToBase64String(
                         System.Text.ASCIIEncoding.ASCII.GetBytes(
-                            string.Format("{0}:{1}", Configuration.Current.PushpayClientID, Configuration.Current.PushpayClientSecret)
+                            string.Format("{0}:{1}", _configurationManager.Current.PushpayClientID, _configurationManager.Current.PushpayClientSecret)
                         )));            
             var postContent = new FormUrlEncodedContent(post);
-            var response = await client.PostAsync(Configuration.Current.OAuth2TokenEndpoint, postContent);
+            
+            var response = await client.PostAsync(_configurationManager.Current.OAuth2TokenEndpoint, postContent);
             var content = await response.Content.ReadAsStringAsync();
             var _accessToken = new AccessToken();
             // exchange code for tokens from authorization server
             try {                
                 var json = JObject.Parse(content);                
-                _accessToken.access_token = json["access_token"].ToString();
-                _accessToken.token_type = json["token_type"].ToString();
-                _accessToken.expires_in = Convert.ToInt64(json["expires_in"].ToString());
+                _accessToken.access_token = json["access_token"].ToString() ?? throw new ArgumentNullException("access_token");
+                _accessToken.token_type = json["token_type"].ToString() ?? throw new ArgumentNullException("token_type");
+                var _expires_in = json["expires_in"].ToString() ?? throw new ArgumentNullException("expires_in");
+                _accessToken.expires_in = Convert.ToInt64(_expires_in);
                 if (json["refresh_token"] != null)
                     _accessToken.refresh_token = json["refresh_token"].ToString();
             }

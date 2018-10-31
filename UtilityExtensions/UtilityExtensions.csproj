@@ -237,11 +237,13 @@
     <Compile Include="Extensions\Extensions.cs" />
     <Compile Include="Extensions\User.cs" />
     <Compile Include="Extensions\Dates.cs" />
+    <Compile Include="Extensions\UtilObj.cs" />
     <Compile Include="Extensions\Validation.cs" />
     <Compile Include="Extensions\EmailAddresses.cs" />
     <Compile Include="Extensions\TypeConversions.cs" />
     <Compile Include="Extensions\Formatting.cs" />
     <Compile Include="GenericConfigCollection.cs" />
+    <Compile Include="Interfaces\IUtilManager.cs" />
     <Compile Include="ObjectDumper.cs" />
     <Compile Include="Extensions\StringExtensions.cs" />
     <Compile Include="Extensions\ObjectUtilities.cs" />
