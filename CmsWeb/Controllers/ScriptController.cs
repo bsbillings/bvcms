@@ -131,8 +131,11 @@ namespace CmsWeb.Controllers
         [HttpGet, Route("~/PyScript/{name}")]
         public ActionResult PyScript(string name, string p1, string p2, string v1, string v2)
         {
+#if DEBUG
+#else
             try
             {
+#endif
                 var script = DbUtil.Db.ContentOfTypePythonScript(name);
                 if (!script.HasValue())
                     return Message("no script named " + name);
@@ -181,19 +184,22 @@ namespace CmsWeb.Controllers
                 foreach (var key in Request.QueryString.AllKeys)
                     pe.DictionaryAdd(key, Request.QueryString[key]);
 
-                pe.RunScript(script);
-                if (pe.Output.StartsWith("REDIRECT="))
-                {
-                    var a = pe.Output.SplitStr("=", 2);
-                    return Redirect(a[1].TrimEnd());
-                }
-
-                return View(pe);
+            pe.Output = ScriptModel.Run(name, pe);
+            if (pe.Output.StartsWith("REDIRECT="))
+            {
+                var a = pe.Output.SplitStr("=", 2);
+                return Redirect(a[1].TrimEnd());
             }
+
+            return View(pe);
+#if DEBUG
+#else
+        }
             catch (Exception ex)
             {
                 return RedirectShowError(ex.Message);
             }
+#endif
         }
         [HttpPost, Route("~/RunPythonScriptProgress2")]
         public ActionResult RunPythonScriptProgress2(string logfile)
