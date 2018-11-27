@@ -2,9 +2,7 @@ using System;
 using System.Configuration;
 using System.Linq;
 using System.Text;
-using System.Web;
 using System.Web.Mvc;
-using System.Web.UI.WebControls;
 using CmsData;
 using CmsData.Classes;
 using CmsWeb.Areas.OnlineReg.Models;
@@ -105,6 +103,7 @@ namespace CmsWeb.Areas.OnlineReg.Controllers
             return true;
         }
 
+        [HttpPost]
         public ActionResult Confirm(int? id, string transactionId, decimal? amount)
         {
             if (!id.HasValue)
@@ -194,6 +193,7 @@ namespace CmsWeb.Areas.OnlineReg.Controllers
             return View("Payment/Process", pf);
         }
 
+        [HttpPost]
         public ActionResult ConfirmDuePaid(int? id, string transactionId, decimal amount)
         {
             Response.NoCache();
