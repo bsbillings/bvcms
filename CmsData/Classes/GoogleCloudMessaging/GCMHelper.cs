@@ -10,7 +10,8 @@ using UtilityExtensions;
 
 namespace CmsData.Classes.GoogleCloudMessaging
 {
-    public class GCMHelper {
+    public class GCMHelper
+    {
         private string _host;
         private readonly CMSDataContext _dataContext;
 
@@ -73,18 +74,18 @@ namespace CmsData.Classes.GoogleCloudMessaging
                                 {
                                     case "InvalidRegistration":
                                     case "NotRegistered":
-                                    {
-                                        var record = (from r in threadDb.MobileAppPushRegistrations
-                                                      where r.RegistrationId == registrationId
-                                                      select r).SingleOrDefault();
+                                        {
+                                            var record = (from r in threadDb.MobileAppPushRegistrations
+                                                          where r.RegistrationId == registrationId
+                                                          select r).SingleOrDefault();
 
-                                        if (record != null)
+                                            if (record != null)
                                             {
                                                 threadDb.MobileAppPushRegistrations.DeleteOnSubmit(record);
                                             }
 
                                             break;
-                                    }
+                                        }
                                 }
                             }
                             else if (result.error != null && result.registration_id.Length > 0)
@@ -115,7 +116,10 @@ namespace CmsData.Classes.GoogleCloudMessaging
 
         public void sendRefresh(List<int> peopleIDs, int type)
         {
-            if (peopleIDs.Count == 0) return;
+            if (peopleIDs.Count == 0)
+            {
+                return;
+            }
 
             GCMData data = new GCMData(type, ACTION_REFRESH, 0, "", "");
             GCMMessage msg = new GCMMessage(peopleIDs, null, data, null, _host, _dataContext);
@@ -132,7 +136,10 @@ namespace CmsData.Classes.GoogleCloudMessaging
 
         public void sendNotification(List<int> peopleIDs, int type, int id, string title, string message)
         {
-            if (peopleIDs.Count == 0) return;
+            if (peopleIDs.Count == 0)
+            {
+                return;
+            }
 
             GCMPayload notification = new GCMPayload(title, message);
             GCMData data = new GCMData(type, ACTION_REFRESH_AND_NOTIFY, id, title, message);

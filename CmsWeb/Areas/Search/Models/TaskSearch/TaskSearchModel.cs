@@ -159,7 +159,7 @@ namespace CmsWeb.Areas.Search.Models
 
             foreach (var tid in SelectedItem)
             {
-                TaskModel.Delegate(tid, toPeopleId, true, true);
+                TaskModel.Delegate(tid, toPeopleId, _host, _dataContext, true, true);
             }
 
             if (Util.UserPeopleId.HasValue)
