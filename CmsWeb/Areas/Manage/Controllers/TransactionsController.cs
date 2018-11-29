@@ -76,6 +76,7 @@ namespace CmsWeb.Areas.Manage.Controllers
         [Authorize(Roles = "ManageTransactions,Finance")]
         public ActionResult CreditVoid(int id, string type, decimal? amt, TransactionsModel m)
         {
+
             var t = DbUtil.Db.Transactions.SingleOrDefault(tt => tt.Id == id);
             if (t == null)
                 return Content("notran");
@@ -110,7 +111,10 @@ namespace CmsWeb.Areas.Manage.Controllers
             }
 
             if (!resp.Approved)
+            {
+                DbUtil.LogActivity("error: " + resp.Message);
                 return Content("error: " + resp.Message);
+            }                
 
             var transaction = new Transaction
             {
@@ -141,6 +145,8 @@ namespace CmsWeb.Areas.Manage.Controllers
 
             DbUtil.Db.Transactions.InsertOnSubmit(transaction);
             DbUtil.Db.SubmitChanges();
+            DbUtil.LogActivity("CreditVoid for " + t.TransactionId);
+
             DbUtil.Db.SendEmail(Util.TryGetMailAddress(DbUtil.Db.StaffEmailForOrg(transaction.OrgId ?? 0)),
                 "Void/Credit Transaction Type: " + type,
                 $@"<table>
@@ -154,8 +160,7 @@ namespace CmsWeb.Areas.Manage.Controllers
 <tr><td>Date</td><td>{t.TransactionDate.FormatDateTm()}</td></tr>
 <tr><td>TranIds</td><td>Org: {t.Id} {t.TransactionId}, Curr: {transaction.Id} {transaction.TransactionId}</td></tr>
 <tr><td>User</td><td>{Util.UserFullName}</td></tr>
-</table>", Util.EmailAddressListFromString(DbUtil.Db.StaffEmailForOrg(transaction.OrgId ?? 0)));
-            DbUtil.LogActivity("CreditVoid for " + t.TransactionId);
+</table>", Util.EmailAddressListFromString(DbUtil.Db.StaffEmailForOrg(transaction.OrgId ?? 0)));            
 
             return View("List", m);
         }
