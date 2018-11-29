@@ -63,41 +63,43 @@ namespace CmsData.Classes.GoogleCloudMessaging
 
                     for (int iX = 0; iX < message.registration_ids.Count; iX++)
                     {
-                        if (response.results.Count > iX)
+                        if (response.results.Count <= iX)
                         {
-                            string registrationId = message.registration_ids[iX];
-                            GCMResponseResult result = response.results[iX];
+                            continue;
+                        }
 
-                            if (!string.IsNullOrEmpty(result.error))
+                        string registrationId = message.registration_ids[iX];
+                        GCMResponseResult result = response.results[iX];
+
+                        if (!string.IsNullOrEmpty(result.error))
+                        {
+                            switch (result.error)
                             {
-                                switch (result.error)
-                                {
-                                    case "InvalidRegistration":
-                                    case "NotRegistered":
+                                case "InvalidRegistration":
+                                case "NotRegistered":
+                                    {
+                                        var record = (from r in threadDb.MobileAppPushRegistrations
+                                                      where r.RegistrationId == registrationId
+                                                      select r).SingleOrDefault();
+
+                                        if (record != null)
                                         {
-                                            var record = (from r in threadDb.MobileAppPushRegistrations
-                                                          where r.RegistrationId == registrationId
-                                                          select r).SingleOrDefault();
-
-                                            if (record != null)
-                                            {
-                                                threadDb.MobileAppPushRegistrations.DeleteOnSubmit(record);
-                                            }
-
-                                            break;
+                                            threadDb.MobileAppPushRegistrations.DeleteOnSubmit(record);
                                         }
-                                }
-                            }
-                            else if (result.error != null && result.registration_id.Length > 0)
-                            {
-                                var record = (from r in threadDb.MobileAppPushRegistrations
-                                              where r.RegistrationId == registrationId
-                                              select r).SingleOrDefault();
 
-                                if (record != null)
-                                {
-                                    record.RegistrationId = result.registration_id;
-                                }
+                                        break;
+                                    }
+                            }
+                        }
+                        else if (result.error != null && result.registration_id.Length > 0)
+                        {
+                            var record = (from r in threadDb.MobileAppPushRegistrations
+                                          where r.RegistrationId == registrationId
+                                          select r).SingleOrDefault();
+
+                            if (record != null)
+                            {
+                                record.RegistrationId = result.registration_id;
                             }
                         }
                     }
