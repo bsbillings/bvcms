@@ -57,16 +57,16 @@ namespace CmsWeb.Areas.People.Controllers
         }
 
         [HttpPost]
-        public ActionResult ChangeAbout(int id, int peopleId)
+        public ActionResult ChangeAbout(int id, int peopleid)
         {
-            TaskModel.SetWhoId(id, peopleId, CurrentDatabase.Host, CurrentDatabase);
+            TaskModel.SetWhoId(id, peopleid, CurrentDatabase.Host, CurrentDatabase);
             return View("Index", TaskModel.FetchModel(id, CurrentDatabase.Host, CurrentDatabase));
         }
 
         [HttpPost]
-        public ActionResult ChangeOwner(int id, int peopleId)
+        public ActionResult ChangeOwner(int id, int peopleid)
         {
-            TaskModel.ChangeOwner(id, peopleId, CurrentDatabase.Host, CurrentDatabase);
+            TaskModel.ChangeOwner(id, peopleid, CurrentDatabase.Host, CurrentDatabase);
             return View("Index", TaskModel.FetchModel(id, CurrentDatabase.Host, CurrentDatabase));
         }
 
@@ -85,9 +85,9 @@ namespace CmsWeb.Areas.People.Controllers
         }
 
         [HttpPost]
-        public ActionResult Delegate(int id, int peopleId)
+        public ActionResult Delegate(int id, int peopleid)
         {
-            TaskModel.Delegate(id, peopleId, CurrentDatabase.Host, CurrentDatabase);
+            TaskModel.Delegate(id, peopleid, CurrentDatabase.Host, CurrentDatabase);
             return View("Index", TaskModel.FetchModel(id, CurrentDatabase.Host, CurrentDatabase));
         }
 
